@@ -1,3 +1,4 @@
+import sys
 import MySQLdb
 import numpy 
 import matplotlib.pyplot as plt 
@@ -91,6 +92,11 @@ def plotshow(frequency,mean,std,start_time):
     ax3.set_xlabel('start_time: '+str(start_time)+'ns')
     plt.show()
 
+
+def generate_url(dlist_id):
+    url = 'http://os.cs.tsinghua.edu.cn:280/lxr/systrace-perl?v=linux-3.5.4&\
+f=&a=x86_32&path0=' + str(dlist_id-250)+'&path1='+str(dlist_id+250)
+    print url 
 ###restat frequency,mean,std heading time ,similar to the first statistics,but add the the condition pid fixed
 ###ex_pid_set:exception pid set
 def restat_bypid(ex_pid_set,columns_pid,columns_R_time,columns_C_time,columns_runtime):
@@ -114,13 +120,9 @@ def restat_bypid(ex_pid_set,columns_pid,columns_R_time,columns_C_time,columns_ru
     
     return restat_result
     
-def main():
-    
-    ###function start,set some parameter
-    ###calculate time 
-    start = time.time()
+def main(f_id,exception_type,restat_from_begin):
     stat_interval_time = 1E9 
-    f_id =28489
+###    f_id =28489
     try:
         conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='aoquan',port=3306)
         cur=conn.cursor()
@@ -161,99 +163,104 @@ def main():
    
     ###get the stat information and the corresponding location
     (frequency,mean,std,location) = stat(columns_R_time,columns_C_time,columns_runtime)
-    ###start time is the first time the function return minus 1E9
+    ###in this program ,start time is the first time the function return minus 1E9
 #    plotshow(frequency,mean,std,int(columns_R_time[0]/1E9)*1E9)
-    ###location of the max frequency
-    loc_max_frequency = frequency.index(max(frequency))
-    print 'location of the max frequency:',loc_max_frequency
-    ###the set of pid which result in the frequency exception
-    pid_frequency_set = list(set(columns_pid[location[loc_max_frequency][0]:location[loc_max_frequency][1]]))
-    print 'the set of pid:',pid_frequency_set
-    
-    ###location of the max mean 
-    loc_max_mean = mean.index(max(mean))
-    print 'location of the max mean:',loc_max_mean
-    ###the set of pid which result in the mean exception
-    pid_mean_set = list(set(columns_pid[location[loc_max_mean][0]:location[loc_max_mean][1]]))
-    print 'the set of pid:',pid_mean_set
-    
-    ###location of the max std
-    loc_max_std = std.index(max(std))
-    print 'location of the max std:',loc_max_std
-    ###the set of pid which result in the std exception
-    pid_std_set = list(set(columns_pid[location[loc_max_std][0]:location[loc_max_std][1]]))
-    print 'the set of pid:',pid_std_set
-    
-    ###print the time consuming
-    end = time.time()
-    print  'take %f s' %(end-start)
-    
-    ################################################################################################################
-    ###find exception by pid set,time is limited in the exception time
-#    restat_runtime=[[] for i in range(len(pid_frequency_set))]
-#    pid_count=0
-#    for pid in pid_frequency_set:
-#        for i in range(location[loc_max_frequency][0],location[loc_max_frequency][1]):
-#            if columns_pid[i]==pid:
-#                restat_runtime[pid_count].append(columns_runtime[i])
-#		print columns_dlist_id[i]
-#	print 'frequency exception function  excute runtime of: '+str(pid)
-#	print restat_runtime[pid_count]
-#	print 'frequency exception function  mean and std of: '+str(pid)
-#	print cal_mean_std(restat_runtime[pid_count])
-#        pid_count+=1
-
-
-
-    restat_runtime=[[] for i in range(len(pid_mean_set))]
-    pid_count=0
-    for pid in pid_mean_set:
-        for i in range(location[loc_max_mean][0],location[loc_max_mean][1]):
-            if columns_pid[i]==pid:
-                restat_runtime[pid_count].append(columns_runtime[i])
-		print columns_dlist_id[i]
-	print 'mean exception function excute runtime of: '+str(pid)
-	print restat_runtime[pid_count]
-	print 'mean exception function mean and std of: '+str(pid)
-	print cal_mean_std(restat_runtime[pid_count])
-        pid_count+=1
+###################################################################################################################
+    if exception_type=='frequency':
+        ###location of the max frequency
+        loc_max_frequency = frequency.index(max(frequency))
+        print 'location of the max frequency:',loc_max_frequency
+        ###the set of pid which result in the frequency exception
+        pid_frequency_set = list(set(columns_pid[location[loc_max_frequency][0]:location[loc_max_frequency][1]]))
+        print 'the set of pid:',pid_frequency_set
+        ###find exception by pid set,time is limited in the exception time
+        restat_runtime=[[] for i in range(len(pid_frequency_set))]
+        pid_count=0
+        for pid in pid_frequency_set:
+            for i in range(location[loc_max_frequency][0],location[loc_max_frequency][1]):
+                if columns_pid[i]==pid:
+                    restat_runtime[pid_count].append(columns_runtime[i])
+    	            print columns_dlist_id[i]
+		    generate_url(columns_dlist_id[i])
+            print 'frequency exception function  excute runtime of: '+str(pid)
+            print restat_runtime[pid_count]
+       	    print 'frequency exception function  mean and std of: '+str(pid)
+       	    print cal_mean_std(restat_runtime[pid_count])
+            pid_count+=1
+	##################
         
-#    restat_runtime=[[] for i in range(len(pid_std_set))]
-#    pid_count=0
-#    for pid in pid_std_set:
-#        for i in range(location[loc_max_std][0],location[loc_max_std][1]):
-#            if columns_pid[i]==pid:
-#                restat_runtime[pid_count].append(columns_runtime[i])
-#	print 'std exception function excute runtime of: '+str(pid)
-##	print restat_runtime[pid_count]
-#	print 'std exception function mean and std of: '+str(pid)
-#	print cal_mean_std(restat_runtime[pid_count])
-#        pid_count+=1
+        ### if you want to stat the exceptional function belong to the exceptional pid from the very beginning, you may use the code below
+        if restat_from_begin==True:
+            restat_result = restat_bypid(pid_frequency_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
+            pid_count = 0
+            for pid in pid_frequency_set:
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+    	        pid_count+=1
 
-#################################################################################################################
-### if you want to stat the exceptional function belong to the exceptional pid from the very beginning, you may use the code below
     
-    ###when exception occured in frequency 
-#    restat_result = restat_bypid(pid_frequency_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
-#    pid_count = 0
-#    for pid in pid_frequency_set:
-#	plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
-#	pid_count+=1
-#     
-#    ###when exception occured in mean
-#    restat_result = restat_bypid(pid_mean_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
-#    pid_count = 0
-#    for pid in pid_mean_set:
-#        plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
-#        pid_count+=1
-#    
-#    ####when exception occured in std 
-#    restat_result = restat_bypid(pid_std_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
-#    pid_count = 0
-#    for pid in pid_mean_set:
-#        plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
-#        pid_count+=1
+###################################################################################################################
+    if exception_type=='mean':
+        ###location of the max mean 
+        loc_max_mean = mean.index(max(mean))
+    	print 'location of the max mean:',loc_max_mean
+   	###the set of pid which result in the mean exception
+    	pid_mean_set = list(set(columns_pid[location[loc_max_mean][0]:location[loc_max_mean][1]]))
+    	print 'the set of pid:',pid_mean_set
+        restat_runtime=[[] for i in range(len(pid_mean_set))]
+        pid_count=0
+        for pid in pid_mean_set:
+            for i in range(location[loc_max_mean][0],location[loc_max_mean][1]):
+                if columns_pid[i]==pid:
+                    restat_runtime[pid_count].append(columns_runtime[i])
+	    	    print columns_dlist_id[i]
+		    generate_url(columns_dlist_id[i])
+	    print 'mean exception function excute runtime of: '+str(pid)
+	    print restat_runtime[pid_count]
+	    print 'mean exception function mean and std of: '+str(pid)
+	    print cal_mean_std(restat_runtime[pid_count])
+            pid_count+=1
+	
+        if restat_from_begin==True:
+            restat_result = restat_bypid(pid_mean_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
+            pid_count = 0
+            for pid in pid_mean_set:
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+                pid_count+=1
+        
 
-#################################################################################################################
+###################################################################################################################
+    if exception_type=='std':
+        ###location of the max std
+    	loc_max_std = std.index(max(std))
+    	print 'location of the max std:',loc_max_std
+    	###the set of pid which result in the std exception
+    	pid_std_set = list(set(columns_pid[location[loc_max_std][0]:location[loc_max_std][1]]))
+    	print 'the set of pid:',pid_std_set
+        restat_runtime=[[] for i in range(len(pid_std_set))]
+        pid_count=0
+        for pid in pid_std_set:
+            for i in range(location[loc_max_std][0],location[loc_max_std][1]):
+                if columns_pid[i]==pid:
+                    restat_runtime[pid_count].append(columns_runtime[i])
+		    print colunms_dlist_id[i]
+		    generate_url(columns_dlist_id[i])
+	    print 'std exception function excute runtime of: '+str(pid)
+	    print restat_runtime[pid_count]
+	    print 'std exception function mean and std of: '+str(pid)
+	    print cal_mean_std(restat_runtime[pid_count])
+            pid_count+=1
+	
+        if restat_from_begin==True:
+            restat_result = restat_bypid(pid_std_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
+            pid_count = 0
+            for pid in pid_mean_set:
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+                pid_count+=1
+    
+###################################################################################################################
 ###run main()
-main()
+start = time.time()
+main(sys.argv[1],sys.argv[2],False)
+###print the time consuming
+end = time.time()
+print  'take %f s' %(end-start)
