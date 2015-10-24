@@ -1,8 +1,17 @@
 import sys
 import MySQLdb
 import numpy 
+#################################################
+#in this program ,we just want to save the svg picture but display the plot,
+#because some environment don't support the gui,like ssh, so we use the 
+#following two row to avoid matplotlib display
+#Must be before importing matplotlib.pyplot or pylab!
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt 
+###############################################
 import time
+from generateLink import *
 
 def cal_mean_std(alist):
     temp_len = len(alist) 
@@ -73,30 +82,49 @@ def stat(columns_R_time,columns_C_time,columns_runtime):
 def plotshow(frequency,mean,std,start_time):
     xData = numpy.arange(len(frequency))
     fig = plt.figure()
+    figure = plt.gcf() # get current figure
+    figure.set_size_inches(19, 10)
     ax1 = fig.add_subplot(311)
     ax1.plot(xData, frequency,'r',label="frequency")
-    ax1.plot(xData, frequency,'b*')
+    ax1.plot(xData, frequency,'b.')
     ax1.set_ylabel('frequency')
     ax1.set_xlabel('start_time: '+str(start_time)+'ns')
     
     ax2 = fig.add_subplot(312)
     ax2.plot(xData,mean,'g',label="mean")
-    ax2.plot(xData,mean,'r*')
+    ax2.plot(xData,mean,'r.')
     ax2.set_ylabel('mean')
     ax2.set_xlabel('start_time: '+str(start_time)+'ns')
     
     ax3 = fig.add_subplot(313)
     ax3.plot(xData,std,'b',label="std")
-    ax3.plot(xData,std,'r*')
+    ax3.plot(xData,std,'r.')
     ax3.set_ylabel('std')
     ax3.set_xlabel('start_time: '+str(start_time)+'ns')
-    plt.show()
+#    plt.show()
+    plt.savefig('abc.svg')
+
+### plot just one figure
+def plotshow_one(stat_para,start_time,exception_type):
+    
+    xData = numpy.arange(len(stat_para))
+    fig =  plt.figure()
+    figure = plt.gcf() # get current figure
+    figure.set_size_inches(19, 10)#the default dpi is 90,so the image size should be [19*90,10*90] of the inch size 19*10 
+    ax = fig.add_subplot(111)
+    ax.plot(xData, stat_para,'r',label=exception_type)
+    ax.plot(xData, stat_para,'b.')
+    ax.set_ylabel(exception_type)
+    ax.set_xlabel('start_time: '+str(start_time)+'ns')
+    pic_name = exception_type+'.svg' 
+    plt.savefig(pic_name);
 
 
 def generate_url(dlist_id):
     url = 'http://os.cs.tsinghua.edu.cn:280/lxr/systrace-perl?v=linux-3.5.4&\
 f=&a=x86_32&path0=' + str(dlist_id-250)+'&path1='+str(dlist_id+250)
-    print url 
+
+
 ###restat frequency,mean,std heading time ,similar to the first statistics,but add the the condition pid fixed
 ###ex_pid_set:exception pid set
 def restat_bypid(ex_pid_set,columns_pid,columns_R_time,columns_C_time,columns_runtime):
@@ -119,9 +147,21 @@ def restat_bypid(ex_pid_set,columns_pid,columns_R_time,columns_C_time,columns_ru
 	pid_count+=1
     
     return restat_result
-    
+
+###
+def get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id):
+### loc: location of the max frequency
+    pid_set = list(set(columns_pid[location[loc][0]:location[loc][1]]))
+    pid_count=0
+    result_dlistid_pid=[]
+    for pid in pid_set:
+        for i in range(location[loc][0],location[loc][1]):
+            if columns_pid[i]==pid:
+                result_dlistid_pid.append([columns_dlist_id[i],pid])
+    return result_dlistid_pid
+###    
 def main(f_id,exception_type,restat_from_begin):
-    stat_interval_time = 1E9 
+#    stat_interval_time = 1E9 
 ###    f_id =28489
     try:
         conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='aoquan',port=3306)
@@ -167,12 +207,11 @@ def main(f_id,exception_type,restat_from_begin):
 #    plotshow(frequency,mean,std,int(columns_R_time[0]/1E9)*1E9)
 ###################################################################################################################
     if exception_type=='frequency':
+        plotshow_one(frequency,int(columns_R_time[0]/1E9)*1E9,'frequency')
         ###location of the max frequency
         loc_max_frequency = frequency.index(max(frequency))
-        print 'location of the max frequency:',loc_max_frequency
         ###the set of pid which result in the frequency exception
         pid_frequency_set = list(set(columns_pid[location[loc_max_frequency][0]:location[loc_max_frequency][1]]))
-        print 'the set of pid:',pid_frequency_set
         ###find exception by pid set,time is limited in the exception time
         restat_runtime=[[] for i in range(len(pid_frequency_set))]
         pid_count=0
@@ -180,15 +219,12 @@ def main(f_id,exception_type,restat_from_begin):
             for i in range(location[loc_max_frequency][0],location[loc_max_frequency][1]):
                 if columns_pid[i]==pid:
                     restat_runtime[pid_count].append(columns_runtime[i])
-    	            print columns_dlist_id[i]
-		    generate_url(columns_dlist_id[i])
-            print 'frequency exception function  excute runtime of: '+str(pid)
-            print restat_runtime[pid_count]
-       	    print 'frequency exception function  mean and std of: '+str(pid)
-       	    print cal_mean_std(restat_runtime[pid_count])
             pid_count+=1
-	##################
-        
+	dlistid_set_per_second=[]
+	for loc in range(0,len(frequency)):
+	    dlistid_set_per_second.append(get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id))
+	generateLink("frequency",dlistid_set_per_second)
+	    
         ### if you want to stat the exceptional function belong to the exceptional pid from the very beginning, you may use the code below
         if restat_from_begin==True:
             restat_result = restat_bypid(pid_frequency_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
@@ -200,25 +236,24 @@ def main(f_id,exception_type,restat_from_begin):
     
 ###################################################################################################################
     if exception_type=='mean':
+        plotshow_one(mean,int(columns_R_time[0]/1E9)*1E9,'mean')
         ###location of the max mean 
         loc_max_mean = mean.index(max(mean))
-    	print 'location of the max mean:',loc_max_mean
+    	#print 'location of the max mean:',loc_max_mean
    	###the set of pid which result in the mean exception
     	pid_mean_set = list(set(columns_pid[location[loc_max_mean][0]:location[loc_max_mean][1]]))
-    	print 'the set of pid:',pid_mean_set
         restat_runtime=[[] for i in range(len(pid_mean_set))]
         pid_count=0
         for pid in pid_mean_set:
             for i in range(location[loc_max_mean][0],location[loc_max_mean][1]):
                 if columns_pid[i]==pid:
                     restat_runtime[pid_count].append(columns_runtime[i])
-	    	    print columns_dlist_id[i]
-		    generate_url(columns_dlist_id[i])
-	    print 'mean exception function excute runtime of: '+str(pid)
-	    print restat_runtime[pid_count]
-	    print 'mean exception function mean and std of: '+str(pid)
-	    print cal_mean_std(restat_runtime[pid_count])
             pid_count+=1
+
+	dlistid_set_per_second=[]
+	for loc in range(0,len(mean)):
+	    dlistid_set_per_second.append(get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id))
+	generateLink("mean",dlistid_set_per_second)
 	
         if restat_from_begin==True:
             restat_result = restat_bypid(pid_mean_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
@@ -230,27 +265,25 @@ def main(f_id,exception_type,restat_from_begin):
 
 ###################################################################################################################
     if exception_type=='std':
+        plotshow_one(std,int(columns_R_time[0]/1E9)*1E9,'std')
         ###location of the max std
     	loc_max_std = std.index(max(std))
-    	print 'location of the max std:',loc_max_std
     	###the set of pid which result in the std exception
     	pid_std_set = list(set(columns_pid[location[loc_max_std][0]:location[loc_max_std][1]]))
-    	print 'the set of pid:',pid_std_set
         restat_runtime=[[] for i in range(len(pid_std_set))]
         pid_count=0
         for pid in pid_std_set:
             for i in range(location[loc_max_std][0],location[loc_max_std][1]):
                 if columns_pid[i]==pid:
                     restat_runtime[pid_count].append(columns_runtime[i])
-		    print colunms_dlist_id[i]
-		    generate_url(columns_dlist_id[i])
-	    print 'std exception function excute runtime of: '+str(pid)
-	    print restat_runtime[pid_count]
-	    print 'std exception function mean and std of: '+str(pid)
-	    print cal_mean_std(restat_runtime[pid_count])
             pid_count+=1
 	
-        if restat_from_begin==True:
+	dlistid_set_per_second=[]
+	for loc in range(0,len(std)):
+	    dlistid_set_per_second.append(get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id))
+	generateLink("std",dlistid_set_per_second)
+        
+	if restat_from_begin==True:
             restat_result = restat_bypid(pid_std_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
             pid_count = 0
             for pid in pid_mean_set:
