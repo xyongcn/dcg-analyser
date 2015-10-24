@@ -160,15 +160,32 @@ def get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id):
                 result_dlistid_pid.append([columns_dlist_id[i],pid])
     return result_dlistid_pid
 ###    
-def main(f_id,exception_type,restat_from_begin):
+###argv[1]:dlist_id argv[2]:exception type argv[3]:kernel version
+###argv[4]:directory type argv[5]:cpu platform argv[6]:start time using percentange
+###argv[7]:end time using percentage 
+def main(f_id,exception_type,kernel_version,directory_type,cpu_platform,start_time_percentage,end_time_percentage,restat_from_begin):
 #    stat_interval_time = 1E9 
 ###    f_id =28489
     try:
         conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='aoquan',port=3306)
         cur=conn.cursor()
     ###
-        cur.execute('select R_time,C_time,RunTime,pid,DLIST_id from `linux-3.5.4_R_x86_32_DLIST` where C_point=%s',(f_id))
+	###
+	table_name =  '`' + kernel_version + '_' + directory_type + '_' + cpu_platform + '_' + 'DLIST`'
+	sql = 'select max(DLIST_id) from '+ table_name
+	cur.execute(sql)
+	lines = cur.fetchall()
+	max_dlist_id = lines[0][0]
+	### find the max dlist_id
+	###
+	sql = 'select R_time,C_time,Runtime,pid,DLIST_id from' + table_name + 'where C_point=%s and DLIST_id >%s and DLIST_id <=%s'
+	cur.execute(sql,(f_id,int(max_dlist_id*float(start_time_percentage)),int(max_dlist_id*float(end_time_percentage)))) 
+        #cur.execute('select R_time,C_time,RunTime,pid,DLIST_id from `linux-3.5.4_R_x86_32_DLIST` where C_point=%s',(f_id))
         lines = cur.fetchall()
+	print len(lines)
+	if len(lines)==0:
+	    print 'no function call' 
+	    return
         record_num = len(lines)
         columns =[['',0] for i in range(record_num)]
         count = 0
@@ -293,7 +310,10 @@ def main(f_id,exception_type,restat_from_begin):
 ###################################################################################################################
 ###run main()
 start = time.time()
-main(sys.argv[1],sys.argv[2],False)
+main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7],False)
+###argv[1]:dlist_id argv[2]:exception type argv[3]:kernel version
+###argv[4]:directory type argv[5]:cpu platform argv[6]:start time using percentange
+###argv[7]:end time using percentage 
 ###print the time consuming
 end = time.time()
 print  'take %f s' %(end-start)
