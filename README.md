@@ -6,6 +6,5 @@ analyser for dynamic callgraph data from Linux system
 文件名statistics.py,generateLink.py,,python脚本编写</br>
 dcgAnalyser由perl脚本编写</br>
 statistics.py函数的执行入口为main函数，在main函数里面可以进行相关参数的设置，例如函数id，统计时间间隔</br>
-文章中有三段被注释掉的代码，根据相关需要可以取注释  </br>
-目前函数是以频率异常为例子，找出对应的dlist_id。</br>
+
 
