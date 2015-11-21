@@ -25,9 +25,8 @@ def cal_mean_std(alist):
     temp_std = (sum2/temp_len-temp_mean**2)**0.5
     return (temp_mean,temp_std)
 
-def stat(columns_R_time,columns_C_time,columns_runtime):
+def stat(columns_R_time,columns_C_time,columns_runtime,stat_interval_time):
     ###
-    stat_interval_time = 1E9
     frequency = []
     mean = []
     std = []
@@ -40,9 +39,9 @@ def stat(columns_R_time,columns_C_time,columns_runtime):
     ###c_p current point the return time    
     ###s_P start point
     ###e_p end point 
-    ###start time int(columns_C_time[0]/1E9)*1E9
-    s_p = stat_interval_time*c_second+int(columns_C_time[0]/1E9)*1E9
-    e_p = stat_interval_time*(c_second+1)+int(columns_C_time[0]/1E9)*1E9
+    ###start time int(columns_C_time[0]/stat_interval_time)*stat_interval_time
+    s_p = stat_interval_time*c_second+int(columns_C_time[0]/stat_interval_time)*stat_interval_time
+    e_p = stat_interval_time*(c_second+1)+int(columns_C_time[0]/stat_interval_time)*stat_interval_time
     
     #in order to find the pre_i and i ,we use a var location to represent them
     location=[]
@@ -85,7 +84,7 @@ def plotshow(frequency,mean,std,start_time):
     xData = numpy.arange(len(frequency))
     fig = plt.figure()
     figure = plt.gcf() # get current figure
-    figure.set_size_inches(19, 10)
+    figure.set_size_inches(19, 20)
     ax1 = fig.add_subplot(311)
     ax1.plot(xData, frequency,'r',label="frequency")
     ax1.plot(xData, frequency,'b.')
@@ -117,7 +116,7 @@ def plotshow_one(stat_para,start_time,exception_type,pic_name):
 #the default dpi is 90,so the image size should be [19*90,10*90] of the inch size 19*10 
 # but for the boundary of the image ,the true size of the image is [19*72,19*72]
     if width<120:
-	int_width = 120
+	width = 120
 ### the default size of window is 120,means display 120 point ,but if the data number is less than the 120,
 ### we choose 120, if the number is greater than 120 ,we will change the window size to fit the data,so the 
 ### density of points would not be to big 
@@ -156,7 +155,7 @@ def restat_bypid(ex_pid_set,columns_pid,columns_R_time,columns_C_time,columns_ru
     	        temp_columns_R_time[pid_count].append(columns_R_time[i])
     	        temp_columns_C_time[pid_count].append(columns_C_time[i])
     	        temp_columns_runtime[pid_count].append(columns_runtime[i])
-    	(frequency_temp,mean_temp,std_temp,location_temp) = stat(temp_columns_R_time[pid_count],temp_columns_C_time[pid_count],temp_columns_runtime[pid_count])
+    	(frequency_temp,mean_temp,std_temp,location_temp) = stat(temp_columns_R_time[pid_count],temp_columns_C_time[pid_count],temp_columns_runtime[pid_count],stat_interval_time)
 	
 	restat_result.append([frequency_temp,mean_temp,std_temp,location_temp,temp_columns_R_time[pid_count][0]])
 	pid_count+=1
@@ -190,13 +189,14 @@ def get_percentage_pid_set(loc,columns_pid,location,columns_runtime):
 	
     pid_count =0
     sum_time = sum(total_time_per_pid_set)
+    result= []
     for pid in pid_set:
 	total_time_per_pid_set[pid_count]=total_time_per_pid_set[pid_count]*1.0/sum_time
+	result.append([total_time_per_pid_set[pid_count],pid])
 	pid_count =pid_count+1
 	
-    return total_time_per_pid_set
-
-
+    
+    return result
 
 ###    
 ###argv[1]:f_path,argv[2]:f_name
@@ -204,13 +204,14 @@ def get_percentage_pid_set(loc,columns_pid,location,columns_runtime):
 ###argv[5]:directory type argv[6]:cpu platform argv[7]:start time using percentange
 ###argv[8]:end time using percentage 
 ###change f_id -->f_path + f_name
-def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform,start_time_percentage,end_time_percentage,restat_from_begin):
+def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform,start_time_percentage,end_time_percentage,stat_interval_time,restat_from_begin):
     f_path1 = f_path.replace('/','~')
-    pic_name = f_path1+"_"+f_name+"_"+exception_type+"_"+kernel_version+"_"+directory_type+"_"+cpu_platform+"_"+start_time_percentage+"_"+end_time_percentage+'.svg' 
-#    stat_interval_time = 1E9 
+    pic_name = f_path1+"_"+f_name+"_"+exception_type+"_"+kernel_version+"_"+directory_type+"_"+cpu_platform+"_"+start_time_percentage+"_"+end_time_percentage+"_"+stat_interval_time+'.svg' 
+    stat_interval_time = float(stat_interval_time)*1E9
 ###    f_id =28489
+#    stat_interval_time = 1E9*0.05
     try:
-        conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='aoquan',port=3306)
+        conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='voice',port=3306)
         cur=conn.cursor()
 	table_name =  '`' + kernel_version + '_' + directory_type + '_' + cpu_platform + '_' + 'FDLIST`'
 ########################################
@@ -223,7 +224,6 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 	    #print 'not id'
 	    cur.close()
 	    conn.close()
-	    print 'haha'
 	    return 0 
 	f_id = lines[0][0]
 #######################################
@@ -231,19 +231,20 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 	###
 	table_name =  '`' + kernel_version + '_' + directory_type + '_' + cpu_platform + '_' + 'DLIST`'
 	sql = 'select max(DLIST_id) from '+ table_name
+
 	cur.execute(sql)
 	lines = cur.fetchall()
 	max_dlist_id = lines[0][0]
 	### find the max dlist_id
 	###
 	sql = 'select R_time,C_time,Runtime,pid,DLIST_id from' + table_name + 'where C_point=%s and DLIST_id >%s and DLIST_id <=%s'
+	#########
 	cur.execute(sql,(f_id,int(max_dlist_id*float(start_time_percentage)),int(max_dlist_id*float(end_time_percentage)))) 
         #cur.execute('select R_time,C_time,RunTime,pid,DLIST_id from `linux-3.5.4_R_x86_32_DLIST` where C_point=%s',(f_id))
         lines = cur.fetchall()
 	if len(lines)==0:
 	    cur.close()
 	    conn.close()
-	    print 'hehe'
 	    return 0
         record_num = len(lines)
         columns =[['',0] for i in range(record_num)]
@@ -276,15 +277,29 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
         columns_runtime[i] = columns[i][2]
         columns_pid[i] = columns[i][3]
 	columns_dlist_id[i] = columns[i][4]
-   
+  
+
+###############################
+###convert the string of s_time and e_time to int 
+    for i in range(0,record_num):
+	columns_R_time[i] = int(columns_R_time[i],16)
+	columns_C_time[i] = int(columns_C_time[i],16)
+	
+###############################
+
+
+
+ 
     ###get the stat information and the corresponding location
-    (frequency,mean,std,location) = stat(columns_R_time,columns_C_time,columns_runtime)
-    ###in this program ,start time is the first time the function return minus 1E9
-#    plotshow(frequency,mean,std,int(columns_R_time[0]/1E9)*1E9)
+    (frequency,mean,std,location) = stat(columns_R_time,columns_C_time,columns_runtime,stat_interval_time)
+    ###in this program ,start time is the first time the function return minus stat_interval_time
+#    plotshow(frequency,mean,std,int(columns_R_time[0]/stat_interval_time)*stat_interval_time)
 ###################################################################################################################
     
     if exception_type=='frequency':
-        plotshow_one(frequency,int(columns_R_time[0]/1E9)*1E9,'frequency',pic_name)
+	print frequency
+	return 0
+        plotshow_one(frequency,int(columns_R_time[0]/stat_interval_time)*stat_interval_time,'frequency',pic_name)
         ###location of the max frequency
         loc_max_frequency = frequency.index(max(frequency))
         ###the set of pid which result in the frequency exception
@@ -309,13 +324,13 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
             restat_result = restat_bypid(pid_frequency_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
             pid_count = 0
             for pid in pid_frequency_set:
-                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/stat_interval_time)*stat_interval_time)
     	        pid_count+=1
 
    
 ###################################################################################################################
     if exception_type=='mean':
-        plotshow_one(mean,int(columns_R_time[0]/1E9)*1E9,'mean',pic_name)
+        plotshow_one(mean,int(columns_R_time[0]/stat_interval_time)*stat_interval_time,'mean',pic_name)
         ###location of the max mean 
         loc_max_mean = mean.index(max(mean))
     	#print 'location of the max mean:',loc_max_mean
@@ -330,21 +345,23 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
             pid_count+=1
 
 	dlistid_set_per_second=[]
+	runtime_percentage_per_pid=[]
 	for loc in range(0,len(mean)):
 	    dlistid_set_per_second.append(get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id))
-	generateLink(pic_name,dlistid_set_per_second,loc_max_mean)
+	    runtime_percentage_per_pid.append(get_percentage_pid_set(loc,columns_pid,location,columns_runtime))
+        generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_max_mean)
 	
         if restat_from_begin==True:
             restat_result = restat_bypid(pid_mean_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
             pid_count = 0
             for pid in pid_mean_set:
-                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/stat_interval_time)*stat_interval_time)
                 pid_count+=1
         
 
 ###################################################################################################################
     if exception_type=='std':
-        plotshow_one(std,int(columns_R_time[0]/1E9)*1E9,'std',pic_name)
+        plotshow_one(std,int(columns_R_time[0]/stat_interval_time)*stat_interval_time,'std',pic_name)
         ###location of the max std
     	loc_max_std = std.index(max(std))
     	###the set of pid which result in the std exception
@@ -358,15 +375,17 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
             pid_count+=1
 	
 	dlistid_set_per_second=[]
+	runtime_percentage_per_pid=[]
 	for loc in range(0,len(std)):
 	    dlistid_set_per_second.append(get_dlistid_pid_set(loc,columns_pid,location,columns_dlist_id))
-	generateLink(pic_name,dlistid_set_per_second,loc_max_std)
+	    runtime_percentage_per_pid.append(get_percentage_pid_set(loc,columns_pid,location,columns_runtime))
+        generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_max_std)
         
 	if restat_from_begin==True:
             restat_result = restat_bypid(pid_std_set,columns_pid,columns_R_time,columns_C_time,columns_runtime)
             pid_count = 0
             for pid in pid_mean_set:
-                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/1E9)*1E9)
+                plotshow(restat_result[pid_count][0],restat_result[pid_count][1],restat_result[pid_count][2],int(restat_result[pid_count][4]/stat_interval_time)*stat_interval_time)
                 pid_count+=1
 
 
@@ -375,7 +394,7 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 ###################################################################################################################
 ###run main()
 #start = time.time()
-re = main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7],sys.argv[8],False)
+re = main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7],sys.argv[8],sys.argv[9],False)
 if re==0:
     print 0
 else:
