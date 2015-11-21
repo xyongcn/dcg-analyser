@@ -126,7 +126,6 @@ def plotshow_one(stat_para,start_time,exception_type,pic_name):
     ax.plot(xData, stat_para,'b.')
     ax.set_ylabel(exception_type)
     ax.set_xlabel('start_time: '+str(start_time)+'ns')
-   # pic_name ='dcg/'+ exception_type+'.svg' 
     pic_name = 'dcg/pic/'+pic_name
     #pic_name ='dcg/'+ dlist_id+"_"+exception_type+"_"+ver_v+"_"+ver_a+"_"+s_time+"_"+e_time+'.svg' 
 #"http://os.cs.tsinghua.edu.cn:280/lxr/dcg/pic/"
@@ -208,8 +207,6 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
     f_path1 = f_path.replace('/','~')
     pic_name = f_path1+"_"+f_name+"_"+exception_type+"_"+kernel_version+"_"+directory_type+"_"+cpu_platform+"_"+start_time_percentage+"_"+end_time_percentage+"_"+stat_interval_time+'.svg' 
     stat_interval_time = float(stat_interval_time)*1E9
-###    f_id =28489
-#    stat_interval_time = 1E9*0.05
     try:
         conn=MySQLdb.connect(host='localhost',user='cgrtl',passwd='9-410',db='voice',port=3306)
         cur=conn.cursor()
@@ -219,16 +216,12 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 	sql = 'select f_id from '+table_name + 'where f_dfile=%s and f_name=%s'
 	cur.execute(sql,(f_path,f_name))
 	lines = cur.fetchall()
-	#print len(lines)
 	if len(lines)==0:
-	    #print 'not id'
 	    cur.close()
 	    conn.close()
 	    return 0 
 	f_id = lines[0][0]
 #######################################
-    ###
-	###
 	table_name =  '`' + kernel_version + '_' + directory_type + '_' + cpu_platform + '_' + 'DLIST`'
 	sql = 'select max(DLIST_id) from '+ table_name
 
@@ -236,11 +229,8 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 	lines = cur.fetchall()
 	max_dlist_id = lines[0][0]
 	### find the max dlist_id
-	###
 	sql = 'select R_time,C_time,Runtime,pid,DLIST_id from' + table_name + 'where C_point=%s and DLIST_id >%s and DLIST_id <=%s'
-	#########
 	cur.execute(sql,(f_id,int(max_dlist_id*float(start_time_percentage)),int(max_dlist_id*float(end_time_percentage)))) 
-        #cur.execute('select R_time,C_time,RunTime,pid,DLIST_id from `linux-3.5.4_R_x86_32_DLIST` where C_point=%s',(f_id))
         lines = cur.fetchall()
 	if len(lines)==0:
 	    cur.close()
@@ -392,8 +382,6 @@ def main(f_path,f_name,exception_type,kernel_version,directory_type,cpu_platform
 
     return 1    
 ###################################################################################################################
-###run main()
-#start = time.time()
 re = main(sys.argv[1],sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5],sys.argv[6],sys.argv[7],sys.argv[8],sys.argv[9],False)
 if re==0:
     print 0

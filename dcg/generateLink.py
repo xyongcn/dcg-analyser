@@ -38,7 +38,6 @@ def generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_
 
 ##############################################################
 
-
     count = 0### add a count ,to find the max_loc
     for row in list_of_all_the_lines:
         if tag==1:
@@ -86,13 +85,8 @@ def generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_
 		    
 		    y0 = y
 		    x0 = x + 10				
-		    #xn = 1220###accurate value is 1228
-		    #xn =972 
-		    #yn = 640###accurate value is 648
-		    #yn = 648 
 		    m = len_pid_list
 		    n = max(num_in_pid_list)
-		    #print n,'@@@@@@@@@@@@@@',y
 		    n_max = int(yn/14)
 		    #if n > yn/14:
 		    if n > 30:
@@ -101,7 +95,6 @@ def generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_
 		    else:
 			if n >(yn-y)/14-1:
 			    y = yn-14*(n+1)
-		    #	    print y,'########'
 		    #if m<=(xn-x-10)/rect_width or x>xn/2:   ###change
 		    if x<xn/2:
 			x = x+10
@@ -138,7 +131,6 @@ def generateLink(pic_name,dlistid_set_per_second,runtime_percentage_per_pid,loc_
     	    	        line2 = line2.replace('@y',str(y+10))
 			
 			runtime_temp = round(runtime_percentage_per_pid[count][i][0],4)*100
-	    	        #line2 = line2.replace('@pid',pid_list[i]+","+str(runtime_temp)+'%')####pid+%
 	    	        line2 = line2.replace('@pid',runtime_percentage_per_pid[count][i][1]+","+str(runtime_temp)+'%')####pid+%
 		        line2 = line2.replace('<a xlink:show="new" xlink:href="@href">','')
 		        line2 = line2.replace('</a>','')
