@@ -76,6 +76,7 @@ print("stat type:
 
 print("start time(%): <input type=text id=\"s_time\" name =\"s_time\"","value=\"",$s_time,"\" size=5 >\n");
 print("end time(%): <input type=text id=\"e_time\" name = \"e_time\"","value=\"",$e_time,"\" size=5 >\n");
+print("interval(1E9): <input type=text id=\"interval\" name = \"interval\"","value=\"",$interval,"\" size=5 >\n");
 print("<input type=submit value=\"dcgAnalyser\">\n","</form>\n");
 
 
@@ -87,10 +88,9 @@ else
 {
     #$dlist_id = 28489;
     
-    $pic_name = $f_path1."_".$f_name."_".$stat_type."_".$ver_v."_".$ver_f."_".$ver_a."_".$s_time."_".$e_time.".svg";
+    $pic_name = $f_path1."_".$f_name."_".$stat_type."_".$ver_v."_".$ver_f."_".$ver_a."_".$s_time."_".$e_time."_".$interval.".svg";
    # system("python","dcg/statistics.py",$f_path,$f_name,$stat_type,$ver_v,$ver_f,$ver_a,$s_time,$e_time);
-    $args = "python "."dcg/statistics.py ".$f_path." ".$f_name." ".$stat_type." ".$ver_v." ".$ver_f." ".$ver_a." ".$s_time." ".$e_time;
-    print $args
+    $args = "python "."dcg/statistics.py ".$f_path." ".$f_name." ".$stat_type." ".$ver_v." ".$ver_f." ".$ver_a." ".$s_time." ".$e_time." ".$interval;
     $re = readpipe($args);
     #@re = readpipe("python","dcg/statistics.py",$f_path,$f_name,$stat_type,$ver_v,$ver_f,$ver_a,$s_time,$e_time);
     if($re == 0)
@@ -107,7 +107,8 @@ else
 
 }
 httpinit;
-
+$ENV{'QUERY_STRINGSID'}="linux-3.19.1";###change by aquan
+$ENV{'QUERY_STRINGPID'} = "x86_64";
 if (!$ENV{'QUERY_STRINGFID'}) #added from 20150609 by jdi -- default argvs
 {
 	$ver_v=$ENV{'QUERY_STRINGSID'};
@@ -137,6 +138,7 @@ $f_name =$HTTP->{'param'}->{'f_name'};
 $stat_type = $HTTP->{'param'}->{'stat_type'};
 $s_time=$HTTP->{'param'}->{'s_time'};
 $e_time=$HTTP->{'param'}->{'e_time'};
+$interval=$HTTP->{'param'}->{'interval'};
 $sid=$HTTP->{'param'}->{'v'};
 makeheader('dcgAnalyser');
 &dcgAnalyser;
